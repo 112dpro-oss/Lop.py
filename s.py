@@ -25,7 +25,7 @@ async def on_ready():
     await bot.tree.sync()
     print(f"✅ Bot is online as {bot.user}")
 
-# ================= SLASH COMMAND =================
+# ================= SLASH COMMAND ================
 
 @bot.tree.command(
     name="ban-player",
