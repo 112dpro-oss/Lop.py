@@ -2,11 +2,11 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import requests
-import os  # 🟢 لإحضار المتغيرات من البيئة
+import os
 
 # ================= CONFIG =================
 
-TOKEN = os.getenv("TOKEN")  # 🟢 هنا سيأخذ التوكن من Environment Variable
+TOKEN = os.getenv("TOKEN")  # التوكن من Environment Variable
 API_URL = "https://idea-canvas--112dpro.replit.app/ban"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
@@ -27,7 +27,7 @@ async def on_ready():
     name="ban-player",
     description="Ban a player from the Roblox game."
 )
-@app_commands.guild_only()  # ❌ يمنع العمل في الـ DM
+@app_commands.guild_only()
 @app_commands.describe(
     username="Roblox username",
     reason="Reason for the ban",
@@ -42,10 +42,7 @@ async def ban_player(
     await interaction.response.defer()
 
     # ===== 1️⃣ Get Roblox UserId =====
-    roblox_payload = {
-        "usernames": [username],
-        "excludeBannedUsers": False
-    }
+    roblox_payload = {"usernames": [username], "excludeBannedUsers": False}
 
     roblox_response = requests.post(
         ROBLOX_USER_API,
@@ -54,18 +51,12 @@ async def ban_player(
     )
 
     if roblox_response.status_code != 200:
-        await interaction.followup.send(
-            "❌ Failed to connect to Roblox.",
-            ephemeral=True
-        )
+        await interaction.followup.send("❌ Failed to connect to Roblox.", ephemeral=True)
         return
 
     data = roblox_response.json().get("data")
     if not data:
-        await interaction.followup.send(
-            "❌ Roblox user not found.",
-            ephemeral=True
-        )
+        await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
         return
 
     user_id = data[0]["id"]
@@ -83,10 +74,7 @@ async def ban_player(
     r = requests.post(API_URL, json=payload, timeout=10)
 
     if r.status_code != 200:
-        await interaction.followup.send(
-            "❌ Failed to send the ban to the game.",
-            ephemeral=True
-        )
+        await interaction.followup.send("❌ Failed to send the ban to the game.", ephemeral=True)
         return
 
     # ===== 3️⃣ Final message =====
