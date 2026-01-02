@@ -96,5 +96,4 @@ async def ban_player(
     await interaction.followup.send(message)
 
 # ================= RUN =================
-
 bot.run(TOKEN)
