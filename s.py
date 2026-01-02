@@ -3,10 +3,16 @@ from discord.ext import commands
 from discord import app_commands
 import requests
 
+# ================= CONFIG =================
+
 TOKEN = "MTQ1NjA5ODczNjI5NDg1ODc5Mw.GgEWcn.CT9K4S_XMWuJMTCg3Bseg98k5B724EGjaJRUyU"
 
 API_URL = "https://idea-canvas--112dpro.replit.app/ban"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
+
+ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
+
+# ================= BOT SETUP =================
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -14,15 +20,19 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f"تم تسجيل الدخول كبوت: {bot.user}")
+    print(f"✅ Logged in as: {bot.user}")
 
-# هذا الكوماند يظهر فقط في السيرفرات، ولن يظهر في الـ DM
-@bot.tree.command(name="ban-player", description="Ban a player from the Roblox game.")
-@app_commands.guild_only()  # يمنع ظهور الأمر في الديركت مسج
+# ================= SLASH COMMAND =================
+
+@bot.tree.command(
+    name="ban-player",
+    description="Ban a player from the Roblox game."
+)
+@app_commands.guild_only()  # ❌ يمنع العمل في الـ DM
 @app_commands.describe(
-    username="The Roblox username of the player to ban",
-    reason="The reason for the ban",
-    evidence="The evidence for the ban"
+    username="Roblox username",
+    reason="Reason for the ban",
+    evidence="Evidence (optional)"
 )
 async def ban_player(
     interaction: discord.Interaction,
@@ -30,24 +40,61 @@ async def ban_player(
     reason: str,
     evidence: str
 ):
-    payload = {
-        "key": SECRET_KEY,
-        "username": username,
-        "reason": reason
+    await interaction.response.defer()
+
+    # ===== 1️⃣ Get Roblox UserId =====
+    roblox_payload = {
+        "usernames": [username],
+        "excludeBannedUsers": False
     }
 
-    r = requests.post(API_URL, json=payload)
+    roblox_response = requests.post(
+        ROBLOX_USER_API,
+        json=roblox_payload,
+        timeout=10
+    )
 
-    if r.status_code != 200:
-        await interaction.response.send_message(
-            "Failed to send the ban to the game",
+    if roblox_response.status_code != 200:
+        await interaction.followup.send(
+            "❌ Failed to connect to Roblox.",
             ephemeral=True
         )
         return
 
-    # هنا نعرض رسالة واحدة بدل Embed
-    message = f"Banned {username} ({r.json().get('user_id', 'Unknown ID')}) for {reason}."
+    data = roblox_response.json().get("data")
+    if not data:
+        await interaction.followup.send(
+            "❌ Roblox user not found.",
+            ephemeral=True
+        )
+        return
 
-    await interaction.response.send_message(message)
+    user_id = data[0]["id"]
+
+    # ===== 2️⃣ Send ban to your API =====
+    payload = {
+        "key": SECRET_KEY,
+        "username": username,
+        "userId": user_id,
+        "reason": reason,
+        "evidence": evidence,
+        "staff": str(interaction.user)
+    }
+
+    r = requests.post(API_URL, json=payload, timeout=10)
+
+    if r.status_code != 200:
+        await interaction.followup.send(
+            "❌ Failed to send the ban to the game.",
+            ephemeral=True
+        )
+        return
+
+    # ===== 3️⃣ Final message =====
+    message = f"Banned {username} ({user_id}) for {reason}."
+
+    await interaction.followup.send(message)
+
+# ================= RUN =================
 
 bot.run(TOKEN)
