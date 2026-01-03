@@ -5,8 +5,8 @@ import requests
 import os
 
 # ================= CONFIG =================
-TOKEN = os.getenv("TOKEN")  # ضع توكن البوت هنا أو في Environment Variable
-API_URL = "https://app-py-jcwg.onrender.com/bans"
+TOKEN = os.getenv("TOKEN")
+API_BASE = "https://app-py-jcwg.onrender.com"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
 
@@ -17,109 +17,121 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    print(f"✅ Logged in as: {bot.user}")
+    print(f"✅ Logged in as {bot.user}")
+
+# ================= HELPER =================
+def get_user_id(username: str):
+    r = requests.post(
+        ROBLOX_USER_API,
+        json={"usernames": [username], "excludeBannedUsers": False},
+        timeout=10
+    )
+    r.raise_for_status()
+    data = r.json().get("data")
+    if not data:
+        return None
+    return data[0]["id"]
 
 # ================= BAN PLAYER =================
-@bot.tree.command(
-    name="ban-player",
-    description="Ban a player from the Roblox game."
-)
+@bot.tree.command(name="ban-player", description="Ban a Roblox player")
 @app_commands.guild_only()
-@app_commands.describe(
-    username="Roblox username (required)",
-    reason="Reason for the ban (required)",
-    evidence="Evidence (optional)"
-)
-async def ban_player(interaction: discord.Interaction, username: str, reason: str, evidence: str = ""):
+async def ban_player(
+    interaction: discord.Interaction,
+    username: str,
+    reason: str,
+    evidence: str
+):
     await interaction.response.defer()
 
-    # تحقق من أن كل الحقول الإجبارية موجودة
-    if not username or not reason:
-        await interaction.followup.send("❌ You must provide both username and reason.", ephemeral=True)
-        return
-
-    # جلب UserId من Roblox
     try:
-        roblox_response = requests.post(ROBLOX_USER_API, json={"usernames":[username]}, timeout=10)
-        roblox_response.raise_for_status()
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to connect to Roblox: {e}", ephemeral=True)
-        return
+        user_id = get_user_id(username)
+        if not user_id:
+            await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
+            return
 
-    data = roblox_response.json().get("data")
-    if not data:
-        await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
-        return
+        payload = {
+            "key": SECRET_KEY,
+            "username": username,
+            "userId": user_id,
+            "reason": reason,
+            "evidence": evidence,
+            "staff": str(interaction.user)
+        }
 
-    user_id = data[0]["id"]
-
-    # إرسال البان إلى الموقع
-    payload = {
-        "key": SECRET_KEY,
-        "username": username,
-        "userId": user_id,
-        "reason": reason,
-        "evidence": evidence,
-        "staff": str(interaction.user)
-    }
-
-    try:
-        r = requests.post(API_URL, json=payload, timeout=10)
+        r = requests.post(f"{API_BASE}/bans", json=payload, timeout=10)
         r.raise_for_status()
-        if r.json().get("status") == "already_banned":
-            await interaction.followup.send(f"⚠️ {username} ({user_id}) is already banned.", ephemeral=True)
-        else:
-            await interaction.followup.send(f"✅ Banned {username} ({user_id}) for {reason}.")
+
+        await interaction.followup.send(
+            f"Banned {username} ({user_id}) for {reason}."
+        )
+
     except Exception as e:
-        await interaction.followup.send(f"❌ Failed to ban player: {e}", ephemeral=True)
+        await interaction.followup.send(f"❌ Failed to ban: {e}", ephemeral=True)
 
 # ================= UNBAN PLAYER =================
-@bot.tree.command(
-    name="unban-player",
-    description="Unban a player from the Roblox game."
-)
+@bot.tree.command(name="unban-player", description="Unban a Roblox player")
 @app_commands.guild_only()
-@app_commands.describe(
-    username="Roblox username (required)",
-    reason="Reason for unban (required)"
-)
-async def unban_player(interaction: discord.Interaction, username: str, reason: str):
+async def unban_player(
+    interaction: discord.Interaction,
+    username: str,
+    reason: str
+):
     await interaction.response.defer()
 
-    if not username or not reason:
-        await interaction.followup.send("❌ You must provide both username and reason for unban.", ephemeral=True)
-        return
-
-    # جلب UserId من Roblox
     try:
-        roblox_response = requests.post(ROBLOX_USER_API, json={"usernames":[username]}, timeout=10)
-        roblox_response.raise_for_status()
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to connect to Roblox: {e}", ephemeral=True)
-        return
+        user_id = get_user_id(username)
+        if not user_id:
+            await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
+            return
 
-    data = roblox_response.json().get("data")
-    if not data:
-        await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
-        return
+        payload = {
+            "key": SECRET_KEY,
+            "username": username,
+            "reason": reason
+        }
 
-    user_id = data[0]["id"]
-
-    # إرسال unban إلى الموقع
-    payload = {"key": SECRET_KEY, "username": username}
-
-    try:
-        r = requests.delete(API_URL, json=payload, timeout=10)
+        r = requests.delete(f"{API_BASE}/bans", json=payload, timeout=10)
         r.raise_for_status()
-        if r.json().get("status") == "not_banned":
-            await interaction.followup.send(f"⚠️ {username} ({user_id}) was not banned.", ephemeral=True)
-        else:
-            await interaction.followup.send(f"✅ Unbanned {username} ({user_id}) for {reason}.")
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to unban player: {e}", ephemeral=True)
 
-# ================= RUN BOT =================
+        await interaction.followup.send(
+            f"Unbanned {username} ({user_id}) for {reason}."
+        )
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to unban: {e}", ephemeral=True)
+
+# ================= BAN INFO =================
+@bot.tree.command(name="ban-info", description="Show ban reason & evidence")
+@app_commands.guild_only()
+async def ban_info(interaction: discord.Interaction, username: str):
+    await interaction.response.defer()
+
+    try:
+        r = requests.get(f"{API_BASE}/bans", timeout=10)
+        r.raise_for_status()
+        bans = r.json()
+
+        if username not in bans:
+            await interaction.followup.send(
+                f"⚠️ {username} is not banned.", ephemeral=True
+            )
+            return
+
+        info = bans[username]
+        reason = info.get("reason", "No reason")
+        evidence = info.get("evidence", "No evidence")
+
+        await interaction.followup.send(
+            f"📄 **Ban info for {username}**\n"
+            f"**Reason:** {reason}\n"
+            f"**Evidence:** {evidence}"
+        )
+
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to fetch ban info: {e}", ephemeral=True)
+
+# ================= RUN =================
 if not TOKEN:
-    raise ValueError("⚠️ TOKEN is not set in Environment Variables!")
+    raise ValueError("TOKEN not set")
 
 bot.run(TOKEN)
