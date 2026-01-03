@@ -4,15 +4,11 @@ from discord import app_commands
 import requests
 import os
 
-# ================= CONFIG =================
-
-TOKEN = os.getenv("TOKEN")  # Discord Bot Token
+TOKEN = os.getenv("TOKEN")
 BAN_API_URL = "https://idea-canvas--112dpro.replit.app/ban"
+UNBAN_API_URL = "https://idea-canvas--112dpro.replit.app/unban"
 BANS_LIST_URL = "https://idea-canvas--112dpro.replit.app/bans"
-
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
-
-# ================= BOT SETUP =================
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -22,21 +18,12 @@ async def on_ready():
     await bot.tree.sync()
     print(f"✅ Logged in as {bot.user}")
 
-# ================= UTIL =================
-
+# ===== Utils =====
 def get_roblox_user_id(username: str):
-    payload = {
-        "usernames": [username],
-        "excludeBannedUsers": False
-    }
-    r = requests.post(ROBLOX_USER_API, json=payload, timeout=10)
-    if r.status_code != 200:
-        return None
-
+    r = requests.post(ROBLOX_USER_API, json={"usernames": [username], "excludeBannedUsers": False}, timeout=10)
     data = r.json().get("data")
     if not data:
         return None
-
     return data[0]["id"]
 
 def get_current_bans():
@@ -45,61 +32,49 @@ def get_current_bans():
         return {}
     return r.json()
 
-# ================= SLASH COMMAND =================
-
-@bot.tree.command(
-    name="ban-player",
-    description="Ban a Roblox player (one-time, no re-ban)."
-)
-@app_commands.describe(
-    username="Roblox username",
-    reason="Reason for the ban"
-)
-async def ban_player(
-    interaction: discord.Interaction,
-    username: str,
-    reason: str
-):
+# ===== /ban-player =====
+@bot.tree.command(name="ban-player", description="Ban a Roblox player (once).")
+@app_commands.describe(username="Roblox username", reason="Reason for ban")
+async def ban_player(interaction: discord.Interaction, username: str, reason: str):
     await interaction.response.defer(ephemeral=True)
-
-    # 1️⃣ Get Roblox UserId
     user_id = get_roblox_user_id(username)
     if not user_id:
         await interaction.followup.send("❌ Roblox user not found.")
         return
-
     user_id_str = str(user_id)
 
-    # 2️⃣ Check if already banned via URL (BanCheck)
     bans = get_current_bans()
     if user_id_str in bans:
-        await interaction.followup.send(
-            f"❌ Player **{username}** is already banned.\n"
-            f"Reason: {bans[user_id_str]}"
-        )
+        await interaction.followup.send(f"❌ Player {username} is already banned.\nReason: {bans[user_id_str]}")
         return
 
-    # 3️⃣ Send ban (ONCE ONLY)
-    payload = {
-        "userId": user_id_str,
-        "reason": reason
-    }
-
-    r = requests.post(BAN_API_URL, json=payload, timeout=10)
+    r = requests.post(BAN_API_URL, json={"userId": user_id_str, "reason": reason}, timeout=10)
     if r.status_code != 200:
-        await interaction.followup.send("❌ Failed to send ban to the game.")
+        await interaction.followup.send("❌ Failed to send ban.")
         return
 
-    # 4️⃣ Success
-    await interaction.followup.send(
-        f"✅ **Banned {username}**\n"
-        f"🆔 UserId: {user_id}\n"
-        f"📄 Reason: {reason}"
-    )
+    await interaction.followup.send(f"✅ Banned {username}\nReason: {reason}")
 
-# ================= RUN =================
+# ===== /unban-player =====
+@bot.tree.command(name="unban-player", description="Unban a Roblox player.")
+@app_commands.describe(username="Roblox username")
+async def unban_player(interaction: discord.Interaction, username: str):
+    await interaction.response.defer(ephemeral=True)
+    user_id = get_roblox_user_id(username)
+    if not user_id:
+        await interaction.followup.send("❌ Roblox user not found.")
+        return
+    user_id_str = str(user_id)
 
+    r = requests.post(UNBAN_API_URL, json={"userId": user_id_str}, timeout=10)
+    if r.status_code != 200:
+        await interaction.followup.send("❌ Failed to unban.")
+        return
+
+    await interaction.followup.send(f"✅ Unbanned {username}")
+
+# ===== Run =====
 if not TOKEN:
-    raise RuntimeError("❌ TOKEN environment variable not set")
+    raise RuntimeError("TOKEN environment variable not set")
 
 bot.run(TOKEN)
