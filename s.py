@@ -5,14 +5,12 @@ import requests
 import os
 
 # ================= CONFIG =================
-
 TOKEN = os.getenv("TOKEN")  # توكن البوت من Environment Variables
 API_URL = "https://idea-canvas--112dpro.replit.app/bans"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
 
 # ================= BOT SETUP =================
-
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -22,7 +20,6 @@ async def on_ready():
     print(f"✅ Logged in as: {bot.user}")
 
 # ================= BAN PLAYER =================
-
 @bot.tree.command(
     name="ban-player",
     description="Ban a player from the Roblox game."
@@ -41,16 +38,13 @@ async def ban_player(
 ):
     await interaction.response.defer()
 
-    # 1️⃣ الحصول على UserId من Roblox
+    # الحصول على UserId من Roblox
     roblox_payload = {"usernames": [username], "excludeBannedUsers": False}
-    roblox_response = requests.post(
-        ROBLOX_USER_API,
-        json=roblox_payload,
-        timeout=10
-    )
-
-    if roblox_response.status_code != 200:
-        await interaction.followup.send("❌ Failed to connect to Roblox.", ephemeral=True)
+    try:
+        roblox_response = requests.post(ROBLOX_USER_API, json=roblox_payload, timeout=10)
+        roblox_response.raise_for_status()
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to connect to Roblox: {e}", ephemeral=True)
         return
 
     data = roblox_response.json().get("data")
@@ -60,7 +54,7 @@ async def ban_player(
 
     user_id = data[0]["id"]
 
-    # 2️⃣ إرسال البان إلى API
+    # إرسال البان إلى API
     payload = {
         "key": SECRET_KEY,
         "username": username,
@@ -72,17 +66,12 @@ async def ban_player(
 
     try:
         r = requests.post(API_URL, json=payload, timeout=10)
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to send the ban: {e}", ephemeral=True)
-        return
-
-    if r.status_code == 200:
+        r.raise_for_status()
         await interaction.followup.send(f"✅ {username} has been banned permanently.", ephemeral=True)
-    else:
-        await interaction.followup.send(f"❌ Failed to ban {username}. Status code: {r.status_code}", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to ban player: {e}", ephemeral=True)
 
 # ================= UNBAN PLAYER =================
-
 @bot.tree.command(
     name="unban-player",
     description="Remove a player from the Roblox ban list."
@@ -101,17 +90,12 @@ async def unban_player(interaction: discord.Interaction, username: str):
 
     try:
         r = requests.delete(API_URL, json=payload, timeout=10)
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to contact API: {e}", ephemeral=True)
-        return
-
-    if r.status_code == 200:
+        r.raise_for_status()
         await interaction.followup.send(f"✅ {username} has been unbanned permanently.", ephemeral=True)
-    else:
-        await interaction.followup.send(f"❌ Failed to unban {username}. Status code: {r.status_code}", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to unban player: {e}", ephemeral=True)
 
 # ================= RUN BOT =================
-
 if not TOKEN:
     raise ValueError("⚠️ TOKEN is not set in Environment Variables!")
 
