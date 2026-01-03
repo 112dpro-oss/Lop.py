@@ -5,8 +5,8 @@ import requests
 import os
 
 # ================= CONFIG =================
-TOKEN = os.getenv("TOKEN")  # توكن البوت من Environment Variables
-API_URL = "https://idea-canvas--112dpro.replit.app/bans"
+TOKEN = os.getenv("TOKEN")  # ضع توكن البوت هنا أو في Environment Variable
+API_URL = "https://app-py-jcwg.onrender.com/bans"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
 
@@ -30,15 +30,10 @@ async def on_ready():
     reason="Reason for the ban",
     evidence="Evidence (optional)"
 )
-async def ban_player(
-    interaction: discord.Interaction,
-    username: str,
-    reason: str,
-    evidence: str = ""
-):
+async def ban_player(interaction: discord.Interaction, username: str, reason: str, evidence: str = ""):
     await interaction.response.defer()
 
-    # الحصول على UserId من Roblox
+    # جلب UserId من Roblox
     roblox_payload = {"usernames": [username], "excludeBannedUsers": False}
     try:
         roblox_response = requests.post(ROBLOX_USER_API, json=roblox_payload, timeout=10)
@@ -54,7 +49,7 @@ async def ban_player(
 
     user_id = data[0]["id"]
 
-    # إرسال البان إلى API
+    # إرسال البان إلى موقعك الجديد
     payload = {
         "key": SECRET_KEY,
         "username": username,
@@ -67,7 +62,10 @@ async def ban_player(
     try:
         r = requests.post(API_URL, json=payload, timeout=10)
         r.raise_for_status()
-        await interaction.followup.send(f"✅ {username} has been banned permanently.", ephemeral=True)
+        if r.json().get("status") == "already_banned":
+            await interaction.followup.send(f"⚠️ {username} is already banned.", ephemeral=True)
+        else:
+            await interaction.followup.send(f"✅ {username} has been banned permanently.", ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f"❌ Failed to ban player: {e}", ephemeral=True)
 
@@ -83,15 +81,15 @@ async def ban_player(
 async def unban_player(interaction: discord.Interaction, username: str):
     await interaction.response.defer()
 
-    payload = {
-        "key": SECRET_KEY,
-        "username": username
-    }
+    payload = {"key": SECRET_KEY, "username": username}
 
     try:
         r = requests.delete(API_URL, json=payload, timeout=10)
         r.raise_for_status()
-        await interaction.followup.send(f"✅ {username} has been unbanned permanently.", ephemeral=True)
+        if r.json().get("status") == "not_banned":
+            await interaction.followup.send(f"⚠️ {username} is not banned.", ephemeral=True)
+        else:
+            await interaction.followup.send(f"✅ {username} has been unbanned permanently.", ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f"❌ Failed to unban player: {e}", ephemeral=True)
 
