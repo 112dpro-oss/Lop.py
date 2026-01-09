@@ -10,7 +10,7 @@ TOKEN = os.getenv("TOKEN")  # Discord Bot Token
 API_BASE = "https://app-py-jcwg.onrender.com"
 SECRET_KEY = "RBX-Discord-Private-KEY-2026!x9"
 ROBLOX_USER_API = "https://users.roblox.com/v1/usernames/users"
-BAN_FILE = "bans.json"  # ملف حفظ الباندات
+BAN_FILE = "bans.json"  ## ملف حفظ الباندات
 
 # ================= BOT SETUP =================
 intents = discord.Intents.default()
