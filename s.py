@@ -36,9 +36,9 @@ def get_user_id(username: str):
 @bot.tree.command(name="ban-player", description="Ban a Roblox player.")
 @app_commands.guild_only()
 @app_commands.describe(
-    username="Roblox username (required)",
-    reason="Reason for the ban (required)",
-    evidence="Evidence of the ban (required)"
+    username="Roblox username",
+    reason="Reason for the ban",
+    evidence="Evidence of the ban"
 )
 async def ban_player(
     interaction: discord.Interaction,
@@ -79,8 +79,8 @@ async def ban_player(
 @bot.tree.command(name="unban-player", description="Unban a Roblox player.")
 @app_commands.guild_only()
 @app_commands.describe(
-    username="Roblox username to unban (required)",
-    reason="Reason for unban (required)"
+    username="Roblox username to unban",
+    reason="Reason for unban"
 )
 async def unban_player(
     interaction: discord.Interaction,
@@ -110,10 +110,10 @@ async def unban_player(
         await interaction.followup.send(f"Unban Failed Please wait until the bot servers are fully online. This may take a few seconds.", ephemeral=True)
 
 # ================= BAN INFO =================
-@bot.tree.command(name="ban-info", description="Show the reason and evidence for a banned Roblox player (from Discord bot).")
+@bot.tree.command(name="ban-info", description="Show the reason and evidence for a banned Roblox player.")
 @app_commands.guild_only()
 @app_commands.describe(
-    username="Roblox username to check ban info (required)"
+    username="Roblox username to check ban info"
 )
 async def ban_info(interaction: discord.Interaction, username: str):
     await interaction.response.defer()
