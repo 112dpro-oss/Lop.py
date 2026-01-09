@@ -112,6 +112,7 @@ async def unban_player(
 # ================= BAN INFO =================
 @bot.tree.command(name="ban-info", description="Show game ban info.")
 @app_commands.guild_only()
+@app_commands.describe(username="Roblox username")
 async def ban_info(interaction: discord.Interaction, username: str):
     await interaction.response.defer(ephemeral=True)
 
@@ -125,22 +126,34 @@ async def ban_info(interaction: discord.Interaction, username: str):
         r.raise_for_status()
         bans = r.json()
 
-        # البحث بالـ userId وليس بالاسم
+        # ✅ الحالة 1: الاسم كمفتاح
+        if username in bans:
+            ban = bans[username]
+            await interaction.followup.send(
+                f"🎮 **Game Ban Info**\n"
+                f"👤 Player: {username}\n"
+                f"📌 Reason: {ban.get('reason', 'N/A')}\n"
+                f"📂 Evidence: {ban.get('evidence', 'N/A')}\n"
+                f"👮 Staff: {ban.get('staff', 'Unknown')}"
+            )
+            return
+
+        # ✅ الحالة 2: البحث بالـ userId
         for ban in bans.values():
-            if ban.get("userId") == user_id:
+            if str(ban.get("userId")) == str(user_id):
                 await interaction.followup.send(
                     f"🎮 **Game Ban Info**\n"
                     f"👤 Player: {username}\n"
-                    f"📌 Reason: {ban.get('reason')}\n"
-                    f"📂 Evidence: {ban.get('evidence')}\n"
-                    f"👮 Staff: {ban.get('staff')}"
+                    f"📌 Reason: {ban.get('reason', 'N/A')}\n"
+                    f"📂 Evidence: {ban.get('evidence', 'N/A')}\n"
+                    f"👮 Staff: {ban.get('staff', 'Unknown')}"
                 )
                 return
 
         await interaction.followup.send(f"✅ {username} is **not banned in the game**.")
 
     except Exception as e:
-        print(e)
+        print("BAN INFO ERROR:", e)
         await interaction.followup.send("❌ Failed to fetch game ban info.")
 
 # ================= RUN BOT =================
