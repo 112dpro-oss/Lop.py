@@ -110,37 +110,37 @@ async def unban_player(
         await interaction.followup.send(f"Unban Failed Please wait until the bot servers are fully online. This may take a few seconds.", ephemeral=True)
 
 # ================= BAN INFO =================
-@bot.tree.command(name="ban-info", description="Show ban info for a player in the game.")
+@bot.tree.command(name="ban-info", description="Show game ban info.")
 @app_commands.guild_only()
-@app_commands.describe(
-    username="Roblox username",
-)
 async def ban_info(interaction: discord.Interaction, username: str):
     await interaction.response.defer(ephemeral=True)
 
     try:
         user_id = get_user_id(username)
         if not user_id:
-            await interaction.followup.send("Roblox user not found.")
+            await interaction.followup.send("❌ Roblox user not found.")
             return
 
-        r = requests.get(f"{API_BASE}/bans/{user_id}", timeout=10)
+        r = requests.get(f"{API_BASE}/bans", timeout=10)
         r.raise_for_status()
-        ban_data = r.json()
+        bans = r.json()
 
-        if not ban_data.get("banned"):
-            await interaction.followup.send(f"✅ {username} is **not banned in the game**.")
-            return
+        # البحث بالـ userId وليس بالاسم
+        for ban in bans.values():
+            if ban.get("userId") == user_id:
+                await interaction.followup.send(
+                    f"🎮 **Game Ban Info**\n"
+                    f"👤 Player: {username}\n"
+                    f"📌 Reason: {ban.get('reason')}\n"
+                    f"📂 Evidence: {ban.get('evidence')}\n"
+                    f"👮 Staff: {ban.get('staff')}"
+                )
+                return
 
-        await interaction.followup.send(
-            f"🎮 **Game Ban Info**\n"
-            f"👤 Player: {username}\n"
-            f"📌 Reason: {ban_data.get('reason')}\n"
-            f"📂 Evidence: {ban_data.get('evidence')}\n"
-            f"👮 Staff: {ban_data.get('staff')}"
-        )
+        await interaction.followup.send(f"✅ {username} is **not banned in the game**.")
 
-    except Exception:
+    except Exception as e:
+        print(e)
         await interaction.followup.send("❌ Failed to fetch game ban info.")
 
 # ================= RUN BOT =================
