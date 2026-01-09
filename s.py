@@ -49,13 +49,13 @@ async def ban_player(
     await interaction.response.defer()
 
     if not username or not reason or not evidence:
-        await interaction.followup.send("❌ You must provide username, reason, and evidence.", ephemeral=True)
+        await interaction.followup.send("You must provide username, reason, and evidence.", ephemeral=True)
         return
 
     try:
         user_id = get_user_id(username)
         if not user_id:
-            await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
+            await interaction.followup.send("Roblox user not found.", ephemeral=True)
             return
 
         payload = {
@@ -73,7 +73,7 @@ async def ban_player(
         await interaction.followup.send(f"Banned {username} ({user_id}) for {reason}.")
 
     except Exception as e:
-        await interaction.followup.send(f"❌ Failed to ban: {e}", ephemeral=True)
+        await interaction.followup.send(f"Ban Failed Please wait until the bot servers are fully online. This may take a few seconds.", ephemeral=True)
 
 # ================= UNBAN PLAYER =================
 @bot.tree.command(name="unban-player", description="Unban a Roblox player.")
@@ -90,13 +90,13 @@ async def unban_player(
     await interaction.response.defer()
 
     if not username or not reason:
-        await interaction.followup.send("❌ You must provide username and reason for unban.", ephemeral=True)
+        await interaction.followup.send("You must provide username and reason for unban.", ephemeral=True)
         return
 
     try:
         user_id = get_user_id(username)
         if not user_id:
-            await interaction.followup.send("❌ Roblox user not found.", ephemeral=True)
+            await interaction.followup.send("Roblox user not found.", ephemeral=True)
             return
 
         payload = {"key": SECRET_KEY, "username": username, "reason": reason}
@@ -107,7 +107,7 @@ async def unban_player(
         await interaction.followup.send(f"Unbanned {username} ({user_id}) for {reason}.")
 
     except Exception as e:
-        await interaction.followup.send(f"❌ Failed to unban: {e}", ephemeral=True)
+        await interaction.followup.send(f"Unban Failed Please wait until the bot servers are fully online. This may take a few seconds.", ephemeral=True)
 
 # ================= BAN INFO =================
 @bot.tree.command(name="ban-info", description="Show the reason and evidence for a banned Roblox player (from Discord bot).")
@@ -119,7 +119,7 @@ async def ban_info(interaction: discord.Interaction, username: str):
     await interaction.response.defer()
 
     if not username:
-        await interaction.followup.send("❌ You must provide a username.", ephemeral=True)
+        await interaction.followup.send("You must provide a username.", ephemeral=True)
         return
 
     try:
@@ -128,7 +128,7 @@ async def ban_info(interaction: discord.Interaction, username: str):
         bans = r.json()
 
         if username not in bans:
-            await interaction.followup.send(f"⚠️ {username} is not banned.", ephemeral=True)
+            await interaction.followup.send(f" {username} is not banned.", ephemeral=True)
             return
 
         ban_data = bans[username]
@@ -142,7 +142,7 @@ async def ban_info(interaction: discord.Interaction, username: str):
         )
 
     except Exception as e:
-        await interaction.followup.send(f"❌ Failed to fetch ban info: {e}", ephemeral=True)
+        await interaction.followup.send(f"Failed to fetch ban info Please wait until the bot servers are fully online. This may take a few seconds.", ephemeral=True)
 
 # ================= RUN BOT =================
 if not TOKEN:
